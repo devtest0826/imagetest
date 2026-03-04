@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Image Compare V2 - 상품 이미지 비교</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #111; color: #ddd; }
+
+  .top-bar { background: #1a1a2e; padding: 16px 24px; border-bottom: 1px solid #333; position: sticky; top: 0; z-index: 50; }
+  .top-bar h1 { font-size: 1.2em; color: #fff; margin-bottom: 8px; }
+  .top-bar p { font-size: 0.78em; color: #777; margin-top: 4px; }
+
+  .product-input { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+  .product-input label { font-size: 0.82em; color: #aaa; }
+  .product-input input, .product-input select {
+    padding: 6px 12px; border-radius: 6px; border: 1px solid #444; background: #222; color: #ddd; font-size: 0.85em;
+  }
+  .product-input input:focus, .product-input select:focus { outline: none; border-color: #4fc3f7; }
+  .product-input input.code-input { width: 200px; font-family: monospace; font-size: 0.9em; letter-spacing: 0.5px; }
+  .product-input .btn-apply {
+    padding: 6px 20px; border-radius: 6px; border: 1px solid #4fc3f7; background: #4fc3f7; color: #000;
+    font-size: 0.85em; font-weight: 600; cursor: pointer; transition: all 0.15s;
+  }
+  .product-input .btn-apply:hover { background: #81d4fa; }
+
+  .global-controls {
+    background: #1a1a2e; padding: 12px 24px; border-bottom: 1px solid #333; display: flex; gap: 20px; align-items: center; flex-wrap: wrap;
+  }
+  .global-controls label { font-size: 0.8em; color: #999; }
+  .global-controls select, .global-controls input {
+    padding: 5px 10px; border-radius: 6px; border: 1px solid #444; background: #222; color: #ddd; font-size: 0.82em;
+  }
+  .global-controls input.num-input { width: 50px; text-align: center; font-family: monospace; }
+  .global-controls select:focus, .global-controls input:focus { outline: none; border-color: #4fc3f7; }
+  .num-group { display: flex; gap: 6px; align-items: center; }
+
+  .main { max-width: 1600px; margin: 0 auto; padding: 20px; }
+
+  .card { margin-bottom: 36px; background: #161622; border-radius: 10px; border: 1px solid #282840; overflow: hidden; }
+  .card-header { padding: 12px 16px; border-bottom: 1px solid #282840; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .card-header .img-num { font-size: 1em; font-weight: 700; color: #4fc3f7; min-width: 80px; }
+  .card-header .src-path { font-size: 0.75em; color: #666; font-family: monospace; }
+
+  .panel-controls { display: flex; gap: 16px; padding: 10px 16px; border-bottom: 1px solid #222; align-items: center; flex-wrap: wrap; }
+  .panel-ctrl-group { display: flex; gap: 6px; align-items: center; }
+  .panel-ctrl-group label { font-size: 0.78em; color: #888; }
+  .panel-ctrl-group select {
+    padding: 4px 10px; border-radius: 5px; border: 1px solid #444; background: #222; color: #ddd; font-size: 0.78em; cursor: pointer;
+  }
+  .panel-ctrl-group select:disabled { opacity: 0.35; cursor: not-allowed; }
+  .panel-ctrl-group select:focus { outline: none; border-color: #4fc3f7; }
+  .panel-divider { width: 1px; height: 24px; background: #333; margin: 0 4px; }
+  .mode-btn { padding: 4px 12px; border-radius: 5px; border: 1px solid #444; background: #222; color: #aaa; font-size: 0.78em; cursor: pointer; transition: all 0.15s; }
+  .mode-btn.active { background: #4fc3f7; color: #000; border-color: #4fc3f7; }
+
+  .card-body { padding: 0; }
+
+  /* Side by side */
+  .compare-sbs { display: flex; gap: 2px; background: #0a0a0a; }
+  .sbs-panel { flex: 1; position: relative; min-width: 0; }
+  .sbs-panel img { width: 100%; display: block; cursor: zoom-in; background: #1a1a1a; }
+  .panel-label { position: absolute; top: 8px; left: 8px; padding: 3px 10px; border-radius: 4px; font-size: 0.72em; font-weight: 600; z-index: 2; }
+  .panel-info { position: absolute; bottom: 8px; left: 8px; right: 8px; padding: 4px 8px; border-radius: 4px; font-size: 0.68em; background: rgba(0,0,0,0.8); color: #bbb; z-index: 2; }
+  .label-a { background: rgba(244,67,54,0.85); color: #fff; }
+  .label-b { background: rgba(76,175,80,0.85); color: #fff; }
+
+  /* Slider */
+  .slider-box { position: relative; overflow: hidden; background: #0a0a0a; cursor: ew-resize; user-select: none; -webkit-user-select: none; }
+  .slider-box .img-back { width: 100%; display: block; }
+  .slider-box .img-front { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: fill; }
+  .slider-box .divider { position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; z-index: 10; box-shadow: 0 0 8px rgba(0,0,0,0.7); pointer-events: none; }
+  .slider-box .knob { position: absolute; top: 50%; width: 34px; height: 34px; border-radius: 50%; background: #fff; z-index: 11; transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center; font-size: 13px; color: #333; box-shadow: 0 2px 8px rgba(0,0,0,0.5); pointer-events: none; }
+  .slider-box .s-label { position: absolute; top: 8px; padding: 3px 10px; border-radius: 4px; font-size: 0.72em; font-weight: 600; z-index: 5; pointer-events: none; }
+  .slider-box .s-info { position: absolute; bottom: 8px; padding: 3px 8px; border-radius: 4px; font-size: 0.68em; background: rgba(0,0,0,0.8); color: #bbb; z-index: 5; pointer-events: none; }
+
+  .hint { text-align: center; color: #555; font-size: 0.72em; padding: 8px; }
+
+  .zoom-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 200; cursor: zoom-out; overflow: auto; }
+  .zoom-overlay.active { display: flex; align-items: center; justify-content: center; }
+  .zoom-overlay img { max-width: none; cursor: zoom-out; }
+  .zoom-label { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); padding: 6px 16px; border-radius: 6px; font-size: 0.85em; color: #fff; z-index: 201; }
+
+  .error-img { display: flex; align-items: center; justify-content: center; min-height: 300px; background: #1a1a1a; color: #555; font-size: 0.85em; }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <h1>상품 이미지 비교 V2</h1>
+  <div class="product-input">
+    <label>브랜드:</label>
+    <select id="brandSelect">
+      <option value="CW">CW</option>
+      <option value="RC">RC</option>
+      <option value="EP">EP</option>
+      <option value="AT">AT</option>
+      <option value="HN">HN</option>
+      <option value="KH">KH</option>
+      <option value="LB">LB</option>
+      <option value="WN">WN</option>
+      <option value="SH">SH</option>
+      <option value="CB">CB</option>
+    </select>
+    <label>연도:</label>
+    <input type="text" id="yearInput" value="2026" style="width:60px; text-align:center; font-family:monospace;">
+    <label>상품코드:</label>
+    <input type="text" id="codeInput" class="code-input" value="CQUAM26212BKX" placeholder="상품코드 입력">
+    <button class="btn-apply" id="btnApply">적용</button>
+  </div>
+  <p>원본 JPG (S3) · 90.original.jpg (S3/Lambda) · WebP (Lambda, sharpen 조절 가능)</p>
+</div>
+
+<div class="global-controls">
+  <div>
+    <label>크기:</label>
+    <select id="sizeSelect">
+      <option value="LM">LM</option>
+      <option value="LL" selected>LL</option>
+      <option value="LZ">LZ</option>
+    </select>
+  </div>
+  <div>
+    <label>이미지 번호:</label>
+    <div class="num-group">
+      <input type="text" class="num-input img-num-input" data-idx="0" value="21">
+      <input type="text" class="num-input img-num-input" data-idx="1" value="22">
+      <input type="text" class="num-input img-num-input" data-idx="2" value="23">
+      <input type="text" class="num-input img-num-input" data-idx="3" value="24">
+      <input type="text" class="num-input img-num-input" data-idx="4" value="25">
+    </div>
+  </div>
+</div>
+
+<div class="main" id="app"></div>
+
+<div class="zoom-overlay" id="zoomOverlay" onclick="this.classList.remove('active')">
+  <div class="zoom-label" id="zoomLabel"></div>
+  <img id="zoomImg" src="">
+</div>
+
+<script>
+const S3 = 'https://s3.ap-northeast-2.amazonaws.com/kop.images';
+const CF = 'https://beta-images.kolonmall.com';
+const R = `${CF}/lambda/resized`;
+
+// --- State ---
+let state = {
+  brand: 'CW',
+  year: '2026',
+  code: 'CQUAM26212BKX',
+  size: 'LL',
+  imgNums: ['21', '22', '23', '24', '25'],
+  cards: [] // per-card state: { leftType, leftSharpen, rightType, rightSharpen, mode }
+};
+
+const DEFAULT_IMG_NUMS = ['1', '2', '3', '4', '5'];
+
+// Version types
+const VERSION_TYPES = [
+  { value: 'original',  label: '원본 JPG',         sharpenable: false },
+  { value: 'jpg',       label: '90.original.jpg',  sharpenable: false },
+  { value: 'webp',      label: '90.original.webp', sharpenable: true  },
+];
+
+const SHARPEN_OPTIONS = [
+  { value: '00', label: 'sharpen 없음' },
+  { value: '03', label: 'σ 0.3' },
+  { value: '05', label: 'σ 0.5 (CF 기본)' },
+  { value: '08', label: 'σ 0.8' },
+  { value: '10', label: 'σ 1.0' },
+  { value: '15', label: 'σ 1.5' },
+  { value: '20', label: 'σ 2.0' },
+];
+
+function initCardStates() {
+  state.cards = state.imgNums.map(() => ({
+    leftType: 'original',
+    leftSharpen: '00',
+    rightType: 'webp',
+    rightSharpen: '05',
+    mode: 'side',
+  }));
+}
+
+function getS3Path(imgNum) {
+  const { brand, year, code, size } = state;
+  return `Prod_Img/${brand}/${year}/${size}${imgNum}/${code}_${size}${imgNum}.jpg`;
+}
+
+function buildUrl(type, sharpen, imgNum) {
+  const s3Path = getS3Path(imgNum);
+  if (type === 'original') {
+    return `${S3}/${s3Path}`;
+  }
+  if (type === 'jpg') {
+    return `${S3}/${s3Path}`;
+  }
+  // webp: CloudFront 쿼리파라미터 방식 (?s=XX)
+  // CF Function이 Accept 헤더 보고 webp 자동 변환 + sharpen 적용
+  return `${CF}/${s3Path}?s=${sharpen || '05'}`;
+}
+
+function getVersionLabel(type, sharpen) {
+  const vt = VERSION_TYPES.find(v => v.value === type);
+  if (type === 'webp') {
+    if (!sharpen || sharpen === '00') return 'webp (no sharpen)';
+    return `webp (σ${(parseInt(sharpen)/10).toFixed(1)})`;
+  }
+  return vt ? vt.label : type;
+}
+
+function openZoom(url, label) {
+  document.getElementById('zoomImg').src = url;
+  document.getElementById('zoomLabel').textContent = label;
+  document.getElementById('zoomOverlay').classList.add('active');
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.getElementById('zoomOverlay').classList.remove('active');
+});
+
+function versionSelect(id, selected, side) {
+  return VERSION_TYPES.map(v =>
+    `<option value="${v.value}" ${v.value === selected ? 'selected' : ''}>${v.label}</option>`
+  ).join('');
+}
+
+function sharpenSelect(selected, disabled) {
+  return SHARPEN_OPTIONS.map(o =>
+    `<option value="${o.value}" ${o.value === selected ? 'selected' : ''}>${o.label}</option>`
+  ).join('');
+}
+
+function renderCard(ci) {
+  const cs = state.cards[ci];
+  const imgNum = state.imgNums[ci];
+  const s3Path = getS3Path(imgNum);
+
+  const leftUrl = buildUrl(cs.leftType, cs.leftSharpen, imgNum);
+  const rightUrl = buildUrl(cs.rightType, cs.rightSharpen, imgNum);
+  const leftLabel = getVersionLabel(cs.leftType, cs.leftSharpen);
+  const rightLabel = getVersionLabel(cs.rightType, cs.rightSharpen);
+
+  const leftSharpenable = VERSION_TYPES.find(v => v.value === cs.leftType)?.sharpenable;
+  const rightSharpenable = VERSION_TYPES.find(v => v.value === cs.rightType)?.sharpenable;
+
+  const el = document.getElementById(`card-${ci}`);
+  if (!el) return;
+
+  el.innerHTML = `
+    <div class="card-header">
+      <span class="img-num">#${imgNum}</span>
+      <span class="src-path">${s3Path}</span>
+    </div>
+    <div class="panel-controls">
+      <div class="panel-ctrl-group">
+        <label style="color:#ef5350;font-weight:600;">좌:</label>
+        <select id="lt-${ci}">${versionSelect(`lt-${ci}`, cs.leftType, 'left')}</select>
+        <select id="ls-${ci}" ${!leftSharpenable ? 'disabled' : ''}>${sharpenSelect(cs.leftSharpen, !leftSharpenable)}</select>
+      </div>
+      <div class="panel-divider"></div>
+      <div class="panel-ctrl-group">
+        <label style="color:#66bb6a;font-weight:600;">우:</label>
+        <select id="rt-${ci}">${versionSelect(`rt-${ci}`, cs.rightType, 'right')}</select>
+        <select id="rs-${ci}" ${!rightSharpenable ? 'disabled' : ''}>${sharpenSelect(cs.rightSharpen, !rightSharpenable)}</select>
+      </div>
+      <div class="panel-divider"></div>
+      <button class="mode-btn ${cs.mode === 'side' ? 'active' : ''}" data-m="side" data-ci="${ci}">나란히</button>
+      <button class="mode-btn ${cs.mode === 'slider' ? 'active' : ''}" data-m="slider" data-ci="${ci}">슬라이더</button>
+    </div>
+    <div class="card-body" id="body-${ci}"></div>
+    <p class="hint">이미지 클릭 → 원본 확대 | 슬라이더 → 드래그로 비교</p>
+  `;
+
+  // Render view
+  const bodyEl = document.getElementById(`body-${ci}`);
+  if (cs.mode === 'side') {
+    bodyEl.innerHTML = `
+      <div class="compare-sbs">
+        <div class="sbs-panel">
+          <span class="panel-label label-a">${leftLabel}</span>
+          <img src="${leftUrl}" onclick="openZoom('${leftUrl.replace(/'/g, "\\'")}','${leftLabel}')" loading="lazy"
+               onerror="this.style.display='none';this.parentNode.insertAdjacentHTML('beforeend','<div class=error-img>이미지 로드 실패</div>')">
+          <div class="panel-info">${leftUrl.split('/').pop()}</div>
+        </div>
+        <div class="sbs-panel">
+          <span class="panel-label label-b">${rightLabel}</span>
+          <img src="${rightUrl}" onclick="openZoom('${rightUrl.replace(/'/g, "\\'")}','${rightLabel}')" loading="lazy"
+               onerror="this.style.display='none';this.parentNode.insertAdjacentHTML('beforeend','<div class=error-img>이미지 로드 실패</div>')">
+          <div class="panel-info">${rightUrl.split('/').pop()}</div>
+        </div>
+      </div>`;
+  } else {
+    bodyEl.innerHTML = `
+      <div class="slider-box" id="sb-${ci}">
+        <span class="s-label label-b" style="right:8px;">${rightLabel}</span>
+        <span class="s-info" style="right:8px;">${rightUrl.split('/').pop()}</span>
+        <img class="img-back" src="${rightUrl}" loading="lazy">
+        <img class="img-front" id="front-${ci}" src="${leftUrl}" loading="lazy">
+        <span class="s-label label-a" style="left:8px;">${leftLabel}</span>
+        <span class="s-info" style="left:8px;">${leftUrl.split('/').pop()}</span>
+        <div class="divider" id="dv-${ci}"></div>
+        <div class="knob" id="kn-${ci}">&#x21D4;</div>
+      </div>`;
+    requestAnimationFrame(() => setupSlider(ci));
+  }
+
+  // Bind events
+  el.querySelector(`#lt-${ci}`).onchange = function() {
+    cs.leftType = this.value;
+    if (!VERSION_TYPES.find(v => v.value === cs.leftType)?.sharpenable) cs.leftSharpen = '';
+    renderCard(ci);
+  };
+  el.querySelector(`#rt-${ci}`).onchange = function() {
+    cs.rightType = this.value;
+    if (!VERSION_TYPES.find(v => v.value === cs.rightType)?.sharpenable) cs.rightSharpen = '';
+    renderCard(ci);
+  };
+  el.querySelector(`#ls-${ci}`).onchange = function() { cs.leftSharpen = this.value; renderCard(ci); };
+  el.querySelector(`#rs-${ci}`).onchange = function() { cs.rightSharpen = this.value; renderCard(ci); };
+  el.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.onclick = function() {
+      cs.mode = this.dataset.m;
+      renderCard(ci);
+    };
+  });
+}
+
+function renderAll() {
+  const app = document.getElementById('app');
+  app.innerHTML = '';
+  state.imgNums.forEach((num, ci) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.id = `card-${ci}`;
+    app.appendChild(card);
+    renderCard(ci);
+  });
+}
+
+function setupSlider(ci) {
+  const box = document.getElementById(`sb-${ci}`);
+  const front = document.getElementById(`front-${ci}`);
+  const dv = document.getElementById(`dv-${ci}`);
+  const kn = document.getElementById(`kn-${ci}`);
+  if (!box || !front) return;
+
+  function update(ratio) {
+    ratio = Math.max(0, Math.min(1, ratio));
+    front.style.clipPath = `inset(0 ${((1 - ratio) * 100).toFixed(2)}% 0 0)`;
+    dv.style.left = (ratio * 100) + '%';
+    kn.style.left = (ratio * 100) + '%';
+  }
+
+  function getR(e) {
+    const rect = box.getBoundingClientRect();
+    const cx = e.touches ? e.touches[0].clientX : e.clientX;
+    return (cx - rect.left) / rect.width;
+  }
+
+  box.onmousedown = e => {
+    e.preventDefault();
+    update(getR(e));
+    const mv = ev => { ev.preventDefault(); update(getR(ev)); };
+    const up = () => { document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); };
+    document.addEventListener('mousemove', mv);
+    document.addEventListener('mouseup', up);
+  };
+  box.ontouchstart = e => update(getR(e));
+  box.ontouchmove = e => update(getR(e));
+
+  update(0.5);
+}
+
+// --- Global control bindings ---
+document.getElementById('btnApply').onclick = function() {
+  state.brand = document.getElementById('brandSelect').value;
+  state.year = document.getElementById('yearInput').value.trim();
+  state.code = document.getElementById('codeInput').value.trim();
+  if (!state.code) return;
+
+  // Reset image numbers to default for new product
+  DEFAULT_IMG_NUMS.forEach((n, i) => {
+    state.imgNums[i] = n;
+    document.querySelectorAll('.img-num-input')[i].value = n;
+  });
+
+  initCardStates();
+  renderAll();
+};
+
+document.getElementById('sizeSelect').onchange = function() {
+  state.size = this.value;
+  renderAll();
+};
+
+document.querySelectorAll('.img-num-input').forEach(input => {
+  input.onchange = function() {
+    const idx = parseInt(this.dataset.idx);
+    state.imgNums[idx] = this.value.trim();
+    renderCard(idx);
+  };
+});
+
+// Also support Enter key in code input
+document.getElementById('codeInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('btnApply').click();
+});
+
+// --- Init ---
+initCardStates();
+renderAll();
+</script>
+</body>
+</html>
