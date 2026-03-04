@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Image Compare V2 - 상품 이미지 비교</title>
+<title>Image Compare V3 - 상품 이미지 비교</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #111; color: #ddd; }
@@ -12,6 +12,24 @@
   .top-bar h1 { font-size: 1.2em; color: #fff; margin-bottom: 8px; }
   .top-bar p { font-size: 0.78em; color: #777; margin-top: 4px; }
 
+  .fetch-section { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+  .fetch-section label { font-size: 0.82em; color: #aaa; }
+  .fetch-section input {
+    padding: 6px 12px; border-radius: 6px; border: 1px solid #444; background: #222; color: #ddd; font-size: 0.85em; flex: 1; min-width: 280px;
+    font-family: monospace;
+  }
+  .fetch-section input:focus { outline: none; border-color: #4fc3f7; }
+  .btn { padding: 6px 20px; border-radius: 6px; border: 1px solid #4fc3f7; background: #4fc3f7; color: #000; font-size: 0.85em; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+  .btn:hover { background: #81d4fa; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-secondary { background: #333; color: #ddd; border-color: #555; }
+  .btn-secondary:hover { background: #444; }
+
+  .status-msg { font-size: 0.8em; margin-top: 6px; }
+  .status-msg.error { color: #ef5350; }
+  .status-msg.success { color: #66bb6a; }
+  .status-msg.loading { color: #4fc3f7; }
+
   .product-input { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
   .product-input label { font-size: 0.82em; color: #aaa; }
   .product-input input, .product-input select {
@@ -19,11 +37,6 @@
   }
   .product-input input:focus, .product-input select:focus { outline: none; border-color: #4fc3f7; }
   .product-input input.code-input { width: 200px; font-family: monospace; font-size: 0.9em; letter-spacing: 0.5px; }
-  .product-input .btn-apply {
-    padding: 6px 20px; border-radius: 6px; border: 1px solid #4fc3f7; background: #4fc3f7; color: #000;
-    font-size: 0.85em; font-weight: 600; cursor: pointer; transition: all 0.15s;
-  }
-  .product-input .btn-apply:hover { background: #81d4fa; }
 
   .global-controls {
     background: #1a1a2e; padding: 12px 24px; border-bottom: 1px solid #333; display: flex; gap: 20px; align-items: center; flex-wrap: wrap;
@@ -35,6 +48,8 @@
   .global-controls input.num-input { width: 50px; text-align: center; font-family: monospace; }
   .global-controls select:focus, .global-controls input:focus { outline: none; border-color: #4fc3f7; }
   .num-group { display: flex; gap: 6px; align-items: center; }
+
+  .available-nums { font-size: 0.75em; color: #666; margin-top: 4px; padding: 0 24px; }
 
   .main { max-width: 1600px; margin: 0 auto; padding: 20px; }
 
@@ -57,7 +72,6 @@
 
   .card-body { padding: 0; }
 
-  /* Side by side */
   .compare-sbs { display: flex; gap: 2px; background: #0a0a0a; }
   .sbs-panel { flex: 1; position: relative; min-width: 0; }
   .sbs-panel img { width: 100%; display: block; cursor: zoom-in; background: #1a1a1a; }
@@ -66,7 +80,6 @@
   .label-a { background: rgba(244,67,54,0.85); color: #fff; }
   .label-b { background: rgba(76,175,80,0.85); color: #fff; }
 
-  /* Slider */
   .slider-box { position: relative; overflow: hidden; background: #0a0a0a; cursor: ew-resize; user-select: none; -webkit-user-select: none; }
   .slider-box .img-back { width: 100%; display: block; }
   .slider-box .img-front { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: fill; }
@@ -88,28 +101,27 @@
 <body>
 
 <div class="top-bar">
-  <h1>상품 이미지 비교 V2</h1>
+  <h1>상품 이미지 비교 V3</h1>
+  <div class="fetch-section">
+    <label>상품 URL/코드:</label>
+    <input type="text" id="urlInput" placeholder="상품코드 또는 https://www.kolonmall.com/Product/CQUAM26212BKX" value="CQUAM26212BKX">
+    <button class="btn" id="btnFetch">이미지 추출</button>
+  </div>
+  <div id="statusMsg" class="status-msg"></div>
   <div class="product-input">
     <label>브랜드:</label>
     <select id="brandSelect">
-      <option value="CW">CW</option>
-      <option value="RC">RC</option>
-      <option value="EP">EP</option>
-      <option value="AT">AT</option>
-      <option value="HN">HN</option>
-      <option value="KH">KH</option>
-      <option value="LB">LB</option>
-      <option value="WN">WN</option>
-      <option value="SH">SH</option>
-      <option value="CB">CB</option>
+      <option value="CW">CW</option><option value="RC">RC</option><option value="EP">EP</option>
+      <option value="AT">AT</option><option value="HN">HN</option><option value="KH">KH</option>
+      <option value="LB">LB</option><option value="WN">WN</option><option value="SH">SH</option><option value="CB">CB</option>
     </select>
     <label>연도:</label>
     <input type="text" id="yearInput" value="2026" style="width:60px; text-align:center; font-family:monospace;">
     <label>상품코드:</label>
-    <input type="text" id="codeInput" class="code-input" value="CQUAM26212BKX" placeholder="상품코드 입력">
-    <button class="btn-apply" id="btnApply">적용</button>
+    <input type="text" id="codeInput" class="code-input" value="CQUAM26212BKX">
+    <button class="btn btn-secondary" id="btnApply">수동 적용</button>
   </div>
-  <p>원본 JPG (S3) · 90.original.jpg (S3/Lambda) · WebP (Lambda, sharpen 조절 가능)</p>
+  <p style="margin-top:6px;">원본 JPG (S3) · WebP (CloudFront, sharpen 조절 가능)</p>
 </div>
 
 <div class="global-controls">
@@ -132,6 +144,7 @@
     </div>
   </div>
 </div>
+<div id="availableNums" class="available-nums"></div>
 
 <div class="main" id="app"></div>
 
@@ -141,23 +154,24 @@
 </div>
 
 <script>
+// === CONFIG ===
+// Worker 배포 후 이 URL을 실제 Worker URL로 변경
+const WORKER_URL = 'https://kolonmall-proxy.devtest-32f.workers.dev';
+
 const S3 = 'https://s3.ap-northeast-2.amazonaws.com/kop.images';
 const CF = 'https://beta-images.kolonmall.com';
-const R = `${CF}/lambda/resized`;
 
-// --- State ---
+// === STATE ===
 let state = {
   brand: 'CW',
   year: '2026',
   code: 'CQUAM26212BKX',
   size: 'LL',
   imgNums: ['21', '22', '23', '24', '25'],
-  cards: [] // per-card state: { leftType, leftSharpen, rightType, rightSharpen, mode }
+  availableNums: { LM: [], LL: [], LZ: [] },
+  cards: [],
 };
 
-const DEFAULT_IMG_NUMS = ['1', '2', '3', '4', '5'];
-
-// Version types
 const VERSION_TYPES = [
   { value: 'original',  label: '원본 JPG',         sharpenable: false },
   { value: 'jpg',       label: '90.original.jpg',  sharpenable: false },
@@ -176,14 +190,13 @@ const SHARPEN_OPTIONS = [
 
 function initCardStates() {
   state.cards = state.imgNums.map(() => ({
-    leftType: 'original',
-    leftSharpen: '00',
-    rightType: 'webp',
-    rightSharpen: '05',
+    leftType: 'original', leftSharpen: '00',
+    rightType: 'webp', rightSharpen: '05',
     mode: 'slider',
   }));
 }
 
+// === URL BUILDERS ===
 function getS3Path(imgNum) {
   const { brand, year, code, size } = state;
   return `Prod_Img/${brand}/${year}/${size}${imgNum}/${code}_${size}${imgNum}.jpg`;
@@ -191,26 +204,141 @@ function getS3Path(imgNum) {
 
 function buildUrl(type, sharpen, imgNum) {
   const s3Path = getS3Path(imgNum);
-  if (type === 'original') {
+  if (type === 'original' || type === 'jpg') {
     return `${S3}/${s3Path}`;
   }
-  if (type === 'jpg') {
-    return `${S3}/${s3Path}`;
-  }
-  // webp: CloudFront 쿼리파라미터 방식 (?s=XX)
-  // CF Function이 Accept 헤더 보고 webp 자동 변환 + sharpen 적용
   return `${CF}/${s3Path}?s=${sharpen || '05'}`;
 }
 
 function getVersionLabel(type, sharpen) {
-  const vt = VERSION_TYPES.find(v => v.value === type);
   if (type === 'webp') {
     if (!sharpen || sharpen === '00') return 'webp (no sharpen)';
     return `webp (σ${(parseInt(sharpen)/10).toFixed(1)})`;
   }
-  return vt ? vt.label : type;
+  return VERSION_TYPES.find(v => v.value === type)?.label || type;
 }
 
+// === FETCH & PARSE ===
+function setStatus(msg, type) {
+  const el = document.getElementById('statusMsg');
+  el.textContent = msg;
+  el.className = 'status-msg ' + (type || '');
+}
+
+function parseProductCode(input) {
+  const trimmed = input.trim();
+  const urlMatch = trimmed.match(/kolonmall\.com\/Product\/([A-Z0-9]+)/i);
+  return urlMatch ? urlMatch[1] : trimmed;
+}
+
+function parseImageUrls(urls) {
+  // Prod_Img/{brand}/{year}/{sizeCode}{num}/{code}_{sizeCode}{num}.jpg
+  const pattern = /Prod_Img\/([A-Z]+)\/(\d{4})\/([A-Z]{2})(\d+)\//;
+  const result = { brand: null, year: null, code: null, nums: { LM: new Set(), LL: new Set(), LZ: new Set(), LS: new Set() } };
+
+  for (const url of urls) {
+    const m = url.match(pattern);
+    if (!m) continue;
+    const [, brand, year, sizeCode, num] = m;
+    if (!result.brand) result.brand = brand;
+    if (!result.year) result.year = year;
+
+    // Extract product code from filename
+    if (!result.code) {
+      const codeMatch = url.match(/\/([A-Z0-9]+)_[A-Z]{2}\d+\.jpg/);
+      if (codeMatch) result.code = codeMatch[1];
+    }
+
+    if (result.nums[sizeCode]) {
+      result.nums[sizeCode].add(num);
+    }
+  }
+
+  // Convert Sets to sorted arrays
+  for (const key of Object.keys(result.nums)) {
+    result.nums[key] = [...result.nums[key]].sort((a, b) => parseInt(a) - parseInt(b));
+  }
+
+  return result;
+}
+
+function pickDefaultNums(parsed) {
+  // LM에서 앞 2개 + LL에서 앞 3개
+  const lmNums = parsed.nums.LM || [];
+  const llNums = parsed.nums.LL || [];
+  const picked = [];
+  for (let i = 0; i < 2 && i < lmNums.length; i++) picked.push(lmNums[i]);
+  for (let i = 0; i < 3 && i < llNums.length; i++) picked.push(llNums[i]);
+  // 5개 미만이면 남은걸로 채움
+  if (picked.length < 5) {
+    const all = [...new Set([...lmNums, ...llNums])].sort((a, b) => parseInt(a) - parseInt(b));
+    for (const n of all) {
+      if (!picked.includes(n)) picked.push(n);
+      if (picked.length >= 5) break;
+    }
+  }
+  return picked.length > 0 ? picked.slice(0, 5) : ['1', '2', '3', '4', '5'];
+}
+
+async function fetchProduct() {
+  const input = document.getElementById('urlInput').value;
+  const code = parseProductCode(input);
+  if (!code) { setStatus('상품코드를 입력해주세요', 'error'); return; }
+
+  const productUrl = `https://www.kolonmall.com/Product/${code}`;
+  const fetchUrl = `${WORKER_URL}?url=${encodeURIComponent(productUrl)}`;
+
+  setStatus('상품 페이지에서 이미지 정보 추출 중...', 'loading');
+  document.getElementById('btnFetch').disabled = true;
+
+  try {
+    const res = await fetch(fetchUrl);
+    const data = await res.json();
+
+    if (data.error) { setStatus('오류: ' + data.error, 'error'); return; }
+    if (!data.urls || data.urls.length === 0) { setStatus('이미지를 찾을 수 없습니다', 'error'); return; }
+
+    const parsed = parseImageUrls(data.urls);
+    if (!parsed.brand) { setStatus('이미지 URL 파싱 실패', 'error'); return; }
+
+    // Update state
+    state.brand = parsed.brand;
+    state.year = parsed.year;
+    state.code = parsed.code || code;
+    state.availableNums = { LM: parsed.nums.LM, LL: parsed.nums.LL, LZ: parsed.nums.LZ };
+
+    const defaultNums = pickDefaultNums(parsed);
+    state.imgNums = defaultNums;
+
+    // Update UI inputs
+    document.getElementById('brandSelect').value = state.brand;
+    document.getElementById('yearInput').value = state.year;
+    document.getElementById('codeInput').value = state.code;
+    document.querySelectorAll('.img-num-input').forEach((el, i) => { el.value = state.imgNums[i] || ''; });
+
+    showAvailableNums();
+    initCardStates();
+    renderAll();
+
+    const totalImgs = Object.values(parsed.nums).reduce((s, arr) => s + arr.length, 0);
+    setStatus(`${state.brand}/${state.year}/${state.code} — ${totalImgs}개 이미지 발견, ${defaultNums.length}개 선택됨`, 'success');
+  } catch (e) {
+    setStatus('Worker 연결 실패: ' + e.message, 'error');
+  } finally {
+    document.getElementById('btnFetch').disabled = false;
+  }
+}
+
+function showAvailableNums() {
+  const { LM, LL, LZ } = state.availableNums;
+  const parts = [];
+  if (LM.length) parts.push(`LM: [${LM.join(', ')}]`);
+  if (LL.length) parts.push(`LL: [${LL.join(', ')}]`);
+  if (LZ.length) parts.push(`LZ: [${LZ.join(', ')}]`);
+  document.getElementById('availableNums').textContent = parts.length ? '사용 가능한 이미지 번호 — ' + parts.join('  |  ') : '';
+}
+
+// === ZOOM ===
 function openZoom(url, label) {
   document.getElementById('zoomImg').src = url;
   document.getElementById('zoomLabel').textContent = label;
@@ -220,28 +348,22 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') document.getElementById('zoomOverlay').classList.remove('active');
 });
 
-function versionSelect(id, selected, side) {
-  return VERSION_TYPES.map(v =>
-    `<option value="${v.value}" ${v.value === selected ? 'selected' : ''}>${v.label}</option>`
-  ).join('');
+// === RENDER ===
+function versionSelect(selected) {
+  return VERSION_TYPES.map(v => `<option value="${v.value}" ${v.value === selected ? 'selected' : ''}>${v.label}</option>`).join('');
 }
-
-function sharpenSelect(selected, disabled) {
-  return SHARPEN_OPTIONS.map(o =>
-    `<option value="${o.value}" ${o.value === selected ? 'selected' : ''}>${o.label}</option>`
-  ).join('');
+function sharpenSelect(selected) {
+  return SHARPEN_OPTIONS.map(o => `<option value="${o.value}" ${o.value === selected ? 'selected' : ''}>${o.label}</option>`).join('');
 }
 
 function renderCard(ci) {
   const cs = state.cards[ci];
   const imgNum = state.imgNums[ci];
   const s3Path = getS3Path(imgNum);
-
   const leftUrl = buildUrl(cs.leftType, cs.leftSharpen, imgNum);
   const rightUrl = buildUrl(cs.rightType, cs.rightSharpen, imgNum);
   const leftLabel = getVersionLabel(cs.leftType, cs.leftSharpen);
   const rightLabel = getVersionLabel(cs.rightType, cs.rightSharpen);
-
   const leftSharpenable = VERSION_TYPES.find(v => v.value === cs.leftType)?.sharpenable;
   const rightSharpenable = VERSION_TYPES.find(v => v.value === cs.rightType)?.sharpenable;
 
@@ -256,24 +378,23 @@ function renderCard(ci) {
     <div class="panel-controls">
       <div class="panel-ctrl-group">
         <label style="color:#ef5350;font-weight:600;">좌:</label>
-        <select id="lt-${ci}">${versionSelect(`lt-${ci}`, cs.leftType, 'left')}</select>
-        <select id="ls-${ci}" ${!leftSharpenable ? 'disabled' : ''}>${sharpenSelect(cs.leftSharpen, !leftSharpenable)}</select>
+        <select id="lt-${ci}">${versionSelect(cs.leftType)}</select>
+        <select id="ls-${ci}" ${!leftSharpenable ? 'disabled' : ''}>${sharpenSelect(cs.leftSharpen)}</select>
       </div>
       <div class="panel-divider"></div>
       <div class="panel-ctrl-group">
         <label style="color:#66bb6a;font-weight:600;">우:</label>
-        <select id="rt-${ci}">${versionSelect(`rt-${ci}`, cs.rightType, 'right')}</select>
-        <select id="rs-${ci}" ${!rightSharpenable ? 'disabled' : ''}>${sharpenSelect(cs.rightSharpen, !rightSharpenable)}</select>
+        <select id="rt-${ci}">${versionSelect(cs.rightType)}</select>
+        <select id="rs-${ci}" ${!rightSharpenable ? 'disabled' : ''}>${sharpenSelect(cs.rightSharpen)}</select>
       </div>
       <div class="panel-divider"></div>
-      <button class="mode-btn ${cs.mode === 'side' ? 'active' : ''}" data-m="side" data-ci="${ci}">나란히</button>
-      <button class="mode-btn ${cs.mode === 'slider' ? 'active' : ''}" data-m="slider" data-ci="${ci}">슬라이더</button>
+      <button class="mode-btn ${cs.mode === 'side' ? 'active' : ''}" data-m="side">나란히</button>
+      <button class="mode-btn ${cs.mode === 'slider' ? 'active' : ''}" data-m="slider">슬라이더</button>
     </div>
     <div class="card-body" id="body-${ci}"></div>
     <p class="hint">이미지 클릭 → 원본 확대 | 슬라이더 → 드래그로 비교</p>
   `;
 
-  // Render view
   const bodyEl = document.getElementById(`body-${ci}`);
   if (cs.mode === 'side') {
     bodyEl.innerHTML = `
@@ -309,21 +430,18 @@ function renderCard(ci) {
   // Bind events
   el.querySelector(`#lt-${ci}`).onchange = function() {
     cs.leftType = this.value;
-    if (!VERSION_TYPES.find(v => v.value === cs.leftType)?.sharpenable) cs.leftSharpen = '';
+    if (!VERSION_TYPES.find(v => v.value === cs.leftType)?.sharpenable) cs.leftSharpen = '00';
     renderCard(ci);
   };
   el.querySelector(`#rt-${ci}`).onchange = function() {
     cs.rightType = this.value;
-    if (!VERSION_TYPES.find(v => v.value === cs.rightType)?.sharpenable) cs.rightSharpen = '';
+    if (!VERSION_TYPES.find(v => v.value === cs.rightType)?.sharpenable) cs.rightSharpen = '00';
     renderCard(ci);
   };
   el.querySelector(`#ls-${ci}`).onchange = function() { cs.leftSharpen = this.value; renderCard(ci); };
   el.querySelector(`#rs-${ci}`).onchange = function() { cs.rightSharpen = this.value; renderCard(ci); };
   el.querySelectorAll('.mode-btn').forEach(btn => {
-    btn.onclick = function() {
-      cs.mode = this.dataset.m;
-      renderCard(ci);
-    };
+    btn.onclick = function() { cs.mode = this.dataset.m; renderCard(ci); };
   });
 }
 
@@ -352,40 +470,33 @@ function setupSlider(ci) {
     dv.style.left = (ratio * 100) + '%';
     kn.style.left = (ratio * 100) + '%';
   }
-
   function getR(e) {
     const rect = box.getBoundingClientRect();
     const cx = e.touches ? e.touches[0].clientX : e.clientX;
     return (cx - rect.left) / rect.width;
   }
-
   box.onmousedown = e => {
-    e.preventDefault();
-    update(getR(e));
+    e.preventDefault(); update(getR(e));
     const mv = ev => { ev.preventDefault(); update(getR(ev)); };
     const up = () => { document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); };
-    document.addEventListener('mousemove', mv);
-    document.addEventListener('mouseup', up);
+    document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up);
   };
   box.ontouchstart = e => update(getR(e));
   box.ontouchmove = e => update(getR(e));
-
   update(0.5);
 }
 
-// --- Global control bindings ---
+// === GLOBAL CONTROLS ===
+document.getElementById('btnFetch').onclick = fetchProduct;
+document.getElementById('urlInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') fetchProduct();
+});
+
 document.getElementById('btnApply').onclick = function() {
   state.brand = document.getElementById('brandSelect').value;
   state.year = document.getElementById('yearInput').value.trim();
   state.code = document.getElementById('codeInput').value.trim();
   if (!state.code) return;
-
-  // Reset image numbers to default for new product
-  DEFAULT_IMG_NUMS.forEach((n, i) => {
-    state.imgNums[i] = n;
-    document.querySelectorAll('.img-num-input')[i].value = n;
-  });
-
   initCardStates();
   renderAll();
 };
@@ -403,12 +514,11 @@ document.querySelectorAll('.img-num-input').forEach(input => {
   };
 });
 
-// Also support Enter key in code input
 document.getElementById('codeInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') document.getElementById('btnApply').click();
 });
 
-// --- Init ---
+// === INIT ===
 initCardStates();
 renderAll();
 </script>
