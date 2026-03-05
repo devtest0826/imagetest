@@ -74,14 +74,14 @@
 
   .compare-sbs { display: flex; gap: 2px; background: #0a0a0a; }
   .sbs-panel { flex: 1; position: relative; min-width: 0; }
-  .sbs-panel img { width: 100%; display: block; cursor: zoom-in; background: #1a1a1a; }
+  .sbs-panel img { max-width: 100%; display: block; cursor: zoom-in; background: #1a1a1a; }
   .panel-label { position: absolute; top: 8px; left: 8px; padding: 3px 10px; border-radius: 4px; font-size: 0.72em; font-weight: 600; z-index: 2; }
   .panel-info { position: absolute; bottom: 8px; left: 8px; right: 8px; padding: 4px 8px; border-radius: 4px; font-size: 0.68em; background: rgba(0,0,0,0.8); color: #bbb; z-index: 2; }
   .label-a { background: rgba(244,67,54,0.85); color: #fff; }
   .label-b { background: rgba(76,175,80,0.85); color: #fff; }
 
   .slider-box { position: relative; overflow: hidden; background: #0a0a0a; cursor: ew-resize; user-select: none; -webkit-user-select: none; }
-  .slider-box .img-back { width: 100%; display: block; }
+  .slider-box .img-back { max-width: 100%; display: block; }
   .slider-box .img-front { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: fill; }
   .slider-box .divider { position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; z-index: 10; box-shadow: 0 0 8px rgba(0,0,0,0.7); pointer-events: none; }
   .slider-box .knob { position: absolute; top: 50%; width: 34px; height: 34px; border-radius: 50%; background: #fff; z-index: 11; transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center; font-size: 13px; color: #333; box-shadow: 0 2px 8px rgba(0,0,0,0.5); pointer-events: none; }
@@ -111,24 +111,19 @@
 </div>
 
 <div class="global-controls">
-  <div>
-    <label>크기:</label>
-    <select id="sizeSelect">
-      <option value="LM" selected>LM</option>
-      <option value="LL">LL</option>
-      <option value="LZ">LZ</option>
-    </select>
-  </div>
-  <div>
-    <label>이미지 번호:</label>
-    <div class="num-group">
-      <input type="text" class="num-input img-num-input" data-idx="0" value="21">
-      <input type="text" class="num-input img-num-input" data-idx="1" value="22">
-      <input type="text" class="num-input img-num-input" data-idx="2" value="23">
-      <input type="text" class="num-input img-num-input" data-idx="3" value="24">
-      <input type="text" class="num-input img-num-input" data-idx="4" value="25">
-    </div>
-  </div>
+  <label>크기:</label>
+  <select id="sizeSelect">
+    <option value="LM">LM</option>
+    <option value="LL" selected>LL</option>
+    <option value="LZ">LZ</option>
+  </select>
+  <label style="margin-left:12px;">이미지 번호:</label>
+  <input type="text" class="num-input img-num-input" data-idx="0" value="21">
+  <input type="text" class="num-input img-num-input" data-idx="1" value="22">
+  <input type="text" class="num-input img-num-input" data-idx="2" value="23">
+  <input type="text" class="num-input img-num-input" data-idx="3" value="24">
+  <input type="text" class="num-input img-num-input" data-idx="4" value="25">
+  <button class="btn" id="btnApplyNums" style="padding:5px 14px; font-size:0.8em;">변경</button>
 </div>
 <div id="availableNums" class="available-nums"></div>
 
@@ -152,7 +147,7 @@ let state = {
   brand: 'CW',
   year: '2026',
   code: 'CQUAM26212BKX',
-  size: 'LM',
+  size: 'LL',
   imgNums: ['21', '22', '23', '24', '25'],
   availableNums: { LM: [], LL: [], LZ: [] },
   cards: [],
@@ -480,12 +475,16 @@ document.getElementById('sizeSelect').onchange = function() {
   renderAll();
 };
 
+function applyImgNums() {
+  document.querySelectorAll('.img-num-input').forEach((el, i) => {
+    state.imgNums[i] = el.value.trim();
+  });
+  initCardStates();
+  renderAll();
+}
+document.getElementById('btnApplyNums').onclick = applyImgNums;
 document.querySelectorAll('.img-num-input').forEach(input => {
-  input.onchange = function() {
-    const idx = parseInt(this.dataset.idx);
-    state.imgNums[idx] = this.value.trim();
-    renderCard(idx);
-  };
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') applyImgNums(); });
 });
 
 // === INIT ===
