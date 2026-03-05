@@ -212,10 +212,26 @@ function parseProductCode(input) {
   return urlMatch ? urlMatch[1] : trimmed;
 }
 
-function parseImageUrls(urls) {
+function parseImageUrls(urls, mainUrls) {
   // Prod_Img/{brand}/{year}/{sizeCode}{num}/{code}_{sizeCode}{num}.jpg
   const pattern = /Prod_Img\/([A-Z]+)\/(\d{4})\/([A-Z]{2})(\d+)\//;
-  const result = { brand: null, year: null, code: null, nums: { LM: new Set(), LL: new Set(), LZ: new Set(), LS: new Set() } };
+  const result = { brand: null, year: null, code: null, nums: { LM: new Set(), LL: new Set(), LZ: new Set(), LS: new Set() }, mainLmNums: [] };
+
+  // slick-slider 메인이미지에서 LM 번호 추출 (순서 보존)
+  for (const url of mainUrls) {
+    const m = url.match(pattern);
+    if (!m) continue;
+    const [, brand, year, sizeCode, num] = m;
+    if (!result.brand) result.brand = brand;
+    if (!result.year) result.year = year;
+    if (!result.code) {
+      const codeMatch = url.match(/\/([A-Z0-9]+)_[A-Z]{2}\d+\.jpg/);
+      if (codeMatch) result.code = codeMatch[1];
+    }
+    if (sizeCode === 'LM' && !result.mainLmNums.includes(num)) {
+      result.mainLmNums.push(num);
+    }
+  }
 
   for (const url of urls) {
     const m = url.match(pattern);
@@ -224,7 +240,6 @@ function parseImageUrls(urls) {
     if (!result.brand) result.brand = brand;
     if (!result.year) result.year = year;
 
-    // Extract product code from filename
     if (!result.code) {
       const codeMatch = url.match(/\/([A-Z0-9]+)_[A-Z]{2}\d+\.jpg/);
       if (codeMatch) result.code = codeMatch[1];
@@ -244,12 +259,29 @@ function parseImageUrls(urls) {
 }
 
 function pickDefaultNums(parsed) {
-  // LM에서 앞 2개 + LL에서 앞 3개
+  // 1순위: slick-slider 메인 LM 이미지 (최대 2개)
+  // 2순위: LL에서 앞 3개
+  // 부족하면 나머지로 채움
+  const mainLm = parsed.mainLmNums || [];
   const lmNums = parsed.nums.LM || [];
   const llNums = parsed.nums.LL || [];
   const picked = [];
-  for (let i = 0; i < 2 && i < lmNums.length; i++) picked.push(lmNums[i]);
-  for (let i = 0; i < 3 && i < llNums.length; i++) picked.push(llNums[i]);
+
+  // slick-slider 메인 LM 이미지 우선 (최대 2개)
+  for (let i = 0; i < 2 && i < mainLm.length; i++) picked.push(mainLm[i]);
+  // mainLm이 없으면 일반 LM에서
+  if (picked.length < 2) {
+    for (const n of lmNums) {
+      if (!picked.includes(n)) picked.push(n);
+      if (picked.length >= 2) break;
+    }
+  }
+
+  // LL에서 3개
+  for (let i = 0; i < 3 && i < llNums.length; i++) {
+    if (!picked.includes(llNums[i])) picked.push(llNums[i]);
+  }
+
   // 5개 미만이면 남은걸로 채움
   if (picked.length < 5) {
     const all = [...new Set([...lmNums, ...llNums])].sort((a, b) => parseInt(a) - parseInt(b));
@@ -279,7 +311,7 @@ async function fetchProduct() {
     if (data.error) { setStatus('오류: ' + data.error, 'error'); return; }
     if (!data.urls || data.urls.length === 0) { setStatus('이미지를 찾을 수 없습니다', 'error'); return; }
 
-    const parsed = parseImageUrls(data.urls);
+    const parsed = parseImageUrls(data.urls, data.mainUrls || []);
     if (!parsed.brand) { setStatus('이미지 URL 파싱 실패', 'error'); return; }
 
     // Update state
@@ -365,6 +397,7 @@ function renderCard(ci) {
         <select id="rt-${ci}">${versionSelect(cs.rightType)}</select>
         <select id="rs-${ci}" ${!rightSharpenable ? 'disabled' : ''}>${sharpenSelect(cs.rightSharpen)}</select>
       </div>
+      <span style="font-size:0.7em;color:#666;margin-left:4px;">sharpen 강도 0~2.0 (숫자가 클수록 강함)</span>
       <div class="panel-divider"></div>
       <button class="mode-btn ${cs.mode === 'side' ? 'active' : ''}" data-m="side">나란히</button>
       <button class="mode-btn ${cs.mode === 'slider' ? 'active' : ''}" data-m="slider">슬라이더</button>

@@ -28,11 +28,19 @@ export default {
       });
       const html = await res.text();
 
-      // Prod_Img URL만 추출해서 JSON으로 반환 (전체 HTML 전송 불필요)
+      // Prod_Img URL 전체 추출
       const pattern = /https:\/\/images\.kolonmall\.com\/Prod_Img\/[^"\\]+/g;
       const matches = [...new Set(html.match(pattern) || [])];
 
-      return new Response(JSON.stringify({ urls: matches }), {
+      // slick-slider 내 img src에서 LM 메인이미지 별도 추출 (순서 보존)
+      const mainPattern = /<img[^>]+src="(https:\/\/images\.kolonmall\.com\/Prod_Img\/[^"]*\/LM\d+\/[^"]+)"/g;
+      const mainUrls = [];
+      let m;
+      while ((m = mainPattern.exec(html)) !== null) {
+        if (!mainUrls.includes(m[1])) mainUrls.push(m[1]);
+      }
+
+      return new Response(JSON.stringify({ urls: matches, mainUrls }), {
         headers: {
           'Content-Type': 'application/json',
           'Access-Control-Allow-Origin': '*',
