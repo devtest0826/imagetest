@@ -15,7 +15,7 @@
   .fetch-section { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
   .fetch-section label { font-size: 0.82em; color: #aaa; }
   .fetch-section input {
-    padding: 6px 12px; border-radius: 6px; border: 1px solid #444; background: #222; color: #ddd; font-size: 0.85em; flex: 1; min-width: 280px;
+    padding: 10px 14px; border-radius: 6px; border: 1px solid #444; background: #222; color: #ddd; font-size: 0.9em; flex: 1; min-width: 280px;
     font-family: monospace;
   }
   .fetch-section input:focus { outline: none; border-color: #4fc3f7; }
@@ -39,7 +39,7 @@
   .product-input input.code-input { width: 200px; font-family: monospace; font-size: 0.9em; letter-spacing: 0.5px; }
 
   .global-controls {
-    background: #1a1a2e; padding: 12px 24px; border-bottom: 1px solid #333; display: flex; gap: 20px; align-items: center; flex-wrap: wrap;
+    background: #1a1a2e; padding: 12px 24px; border-bottom: 1px solid #333; display: flex; gap: 20px; align-items: center; flex-wrap: wrap; justify-content: center;
   }
   .global-controls label { font-size: 0.8em; color: #999; }
   .global-controls select, .global-controls input {
@@ -103,24 +103,10 @@
 <div class="top-bar">
   <h1>상품 이미지 비교 V3</h1>
   <div class="fetch-section">
-    <label>상품 URL/코드:</label>
-    <input type="text" id="urlInput" placeholder="상품코드 또는 https://www.kolonmall.com/Product/CQUAM26212BKX" value="CQUAM26212BKX">
+    <input type="text" id="urlInput" placeholder="상품코드 또는 코오롱몰 상품상세 url을 입력해주세요" value="CQUAM26212BKX">
     <button class="btn" id="btnFetch">이미지 추출</button>
   </div>
   <div id="statusMsg" class="status-msg"></div>
-  <div class="product-input">
-    <label>브랜드:</label>
-    <select id="brandSelect">
-      <option value="CW">CW</option><option value="RC">RC</option><option value="EP">EP</option>
-      <option value="AT">AT</option><option value="HN">HN</option><option value="KH">KH</option>
-      <option value="LB">LB</option><option value="WN">WN</option><option value="SH">SH</option><option value="CB">CB</option>
-    </select>
-    <label>연도:</label>
-    <input type="text" id="yearInput" value="2026" style="width:60px; text-align:center; font-family:monospace;">
-    <label>상품코드:</label>
-    <input type="text" id="codeInput" class="code-input" value="CQUAM26212BKX">
-    <button class="btn btn-secondary" id="btnApply">수동 적용</button>
-  </div>
   <p style="margin-top:6px;">원본 JPG (S3) · WebP (CloudFront, sharpen 조절 가능)</p>
 </div>
 
@@ -128,8 +114,8 @@
   <div>
     <label>크기:</label>
     <select id="sizeSelect">
-      <option value="LM">LM</option>
-      <option value="LL" selected>LL</option>
+      <option value="LM" selected>LM</option>
+      <option value="LL">LL</option>
       <option value="LZ">LZ</option>
     </select>
   </div>
@@ -166,7 +152,7 @@ let state = {
   brand: 'CW',
   year: '2026',
   code: 'CQUAM26212BKX',
-  size: 'LL',
+  size: 'LM',
   imgNums: ['21', '22', '23', '24', '25'],
   availableNums: { LM: [], LL: [], LZ: [] },
   cards: [],
@@ -311,9 +297,6 @@ async function fetchProduct() {
     state.imgNums = defaultNums;
 
     // Update UI inputs
-    document.getElementById('brandSelect').value = state.brand;
-    document.getElementById('yearInput').value = state.year;
-    document.getElementById('codeInput').value = state.code;
     document.querySelectorAll('.img-num-input').forEach((el, i) => { el.value = state.imgNums[i] || ''; });
 
     showAvailableNums();
@@ -492,15 +475,6 @@ document.getElementById('urlInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') fetchProduct();
 });
 
-document.getElementById('btnApply').onclick = function() {
-  state.brand = document.getElementById('brandSelect').value;
-  state.year = document.getElementById('yearInput').value.trim();
-  state.code = document.getElementById('codeInput').value.trim();
-  if (!state.code) return;
-  initCardStates();
-  renderAll();
-};
-
 document.getElementById('sizeSelect').onchange = function() {
   state.size = this.value;
   renderAll();
@@ -512,10 +486,6 @@ document.querySelectorAll('.img-num-input').forEach(input => {
     state.imgNums[idx] = this.value.trim();
     renderCard(idx);
   };
-});
-
-document.getElementById('codeInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') document.getElementById('btnApply').click();
 });
 
 // === INIT ===
