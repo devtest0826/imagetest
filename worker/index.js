@@ -32,12 +32,15 @@ export default {
       const pattern = /https:\/\/images\.kolonmall\.com\/Prod_Img\/[^"\\]+/g;
       const matches = [...new Set(html.match(pattern) || [])];
 
-      // slick-slider 내 img src에서 LM 메인이미지 별도 추출 (순서 보존)
-      const mainPattern = /<img[^>]+src="(https:\/\/images\.kolonmall\.com\/Prod_Img\/[^"]*\/LM\d+\/[^"]+)"/g;
+      // slick-active slick-current 슬라이드에서 메인 LM 이미지 추출
       const mainUrls = [];
-      let m;
-      while ((m = mainPattern.exec(html)) !== null) {
-        if (!mainUrls.includes(m[1])) mainUrls.push(m[1]);
+      const currentSlide = html.match(/slick-active slick-current.*?(?=slick-slide|$)/s);
+      if (currentSlide) {
+        const imgPattern = /class="pannel"><img src="(https:\/\/images\.kolonmall\.com\/Prod_Img\/[^"]*\/LM\d+\/[^"]+)"/g;
+        let m;
+        while ((m = imgPattern.exec(currentSlide[0])) !== null) {
+          if (!mainUrls.includes(m[1])) mainUrls.push(m[1]);
+        }
       }
 
       return new Response(JSON.stringify({ urls: matches, mainUrls }), {
